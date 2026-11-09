@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lernquiz</title>
+<style>
+:root{
+  --bg:#f6f5f1;--card:#ffffff;--text:#1d1d1b;--muted:#6b6a65;--line:#e3e1da;
+  --accent:#2f5d50;--accent-text:#ffffff;--accent-soft:#e3eee9;
+  --ok:#2e7d4f;--ok-soft:#e4f3ea;--bad:#b3412e;--bad-soft:#f8e6e2;--warn:#8a5a00;--warn-soft:#fbf0d9;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#161715;--card:#1f201e;--text:#ecebe6;--muted:#9c9b95;--line:#33342f;
+    --accent:#7fbfa9;--accent-text:#10201a;--accent-soft:#24332d;
+    --ok:#6fcf97;--ok-soft:#1f3326;--bad:#f08a76;--bad-soft:#3a2420;--warn:#e6b45c;--warn-soft:#3a3020;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar{max-width:720px;margin:0 auto;padding:12px 16px 0}
+.brand{font-weight:700;font-size:18px;margin-bottom:8px}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:8px 10px;font:inherit;font-size:15px;cursor:pointer;white-space:nowrap}
+nav button.active{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+main{max-width:720px;margin:0 auto;padding:16px 16px 64px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{font-size:20px;margin:0 0 10px}
+h3{font-size:16px;margin:0 0 8px}
+p{margin:0 0 10px}
+.muted{color:var(--muted);font-size:14px}
+label.field{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+input[type=text],input[type=password],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>input[type=text],.row>select{flex:1;min-width:160px}
+button.btn{background:var(--accent);color:var(--accent-text);border:none;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+button.btn.secondary{background:var(--accent-soft);color:var(--text)}
+button.btn.danger{background:var(--bad-soft);color:var(--bad)}
+button.btn:disabled{opacity:.5;cursor:default}
+button.link{background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
+.stats{display:flex;gap:10px;margin-bottom:14px}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:26px;line-height:1.2}
+.stat span{font-size:13px;color:var(--muted)}
+.subj{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.subj:first-of-type{border-top:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer;user-select:none}
+.chip input{margin:0}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--text);margin-right:6px}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:14px}
+.progress div{height:100%;background:var(--accent);transition:width .3s}
+.question{font-size:18px;font-weight:600;margin:8px 0 14px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;background:var(--bg)}
+.opt input{margin-top:4px}
+.opt.ok{border-color:var(--ok);background:var(--ok-soft)}
+.opt.bad{border-color:var(--bad);background:var(--bad-soft)}
+.feedback{border-radius:10px;padding:12px;margin:12px 0}
+.feedback.ok{background:var(--ok-soft)}
+.feedback.bad{background:var(--bad-soft)}
+.feedback.warn{background:var(--warn-soft)}
+.status{margin-top:10px;font-size:14px}
+.status.err{color:var(--bad)}
+.qitem{border-top:1px solid var(--line);padding:10px 0;display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.qitem:first-child{border-top:none}
+details summary{cursor:pointer;font-weight:600}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Lernquiz</div>
+    <nav id="nav">
+      <button data-view="home">Heute</button>
+      <button data-view="new">Neues Quiz</button>
+      <button data-view="pool">Fragen</button>
+      <button data-view="settings">Einstellungen</button>
+    </nav>
+  </div>
+</header>
+<main id="main"></main>
+
+<script>
+"use strict";
+
+/* ---------- Speicher ---------- */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch(e){ alert("Speichern im Browser nicht möglich: " + e.message); } }
+};
+function loadDb(){
+  try{
+    const d = JSON.parse(LS.get("lq_data", "null"));
+    if(d && Array.isArray(d.subjects) && Array.isArray(d.questions)) return Object.assign({history: []}, d);
+  }catch(e){}
+  return {subjects: [], questions: [], history: []};
+}
+let db = loadDb();
+function save(){ LS.set("lq_data", JSON.stringify(db)); }
+const getKey = () => LS.get("lq_key", "").trim();
+const getModel = () => LS.get("lq_model", "gemini-2.5-flash").trim() || "gemini-2.5-flash";
+const getDaily = () => Math.min(10, Math.max(5, parseInt(LS.get("lq_daily", "8"), 10) || 8));
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+/* ---------- Hilfsfunktionen ---------- */
+function h(tag, props, ...kids){
+  const e = document.createElement(tag);
+  if(props) for(const [k, v] of Object.entries(props)){
+    if(v == null || v === false) continue;
+    if(k === "class") e.className = v;
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if(["value","checked","disabled","selected"].includes(k)) e[k] = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for(const c of kids.flat()){
+    if(c == null || c === false) continue;
+    e.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return e;
+}
+const clean = kids => kids.flat().filter(c => c != null && c !== false);
+function put(el, ...kids){ el.append(...clean(kids)); }
+function fill(el, ...kids){ el.replaceChildren(...clean(kids)); }
+const pad = n => String(n).padStart(2, "0");
+function today(){ const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function addDays(s, n){ const [y,m,d] = s.split("-").map(Number); const x = new Date(y, m-1, d+n); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`; }
+function fmtDate(s){ if(!s) return ""; const [y,m,d] = s.split("-"); return `${d}.${m}.${y}`; }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function shuffle(a){ for(let i = a.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const subjName = id => (db.subjects.find(s => s.id === id) || {}).name || "Ohne Fach";
+const TYPE_LABEL = {single: "Single Choice", multi: "Multiple Choice", offen: "Offene Frage"};
+
+/* ---------- Spaced Repetition (Leitner-Stufen) ---------- */
+const INTERVALS = [0, 2, 5, 10, 21, 45]; // Tage bis zur nächsten Abfrage je Stufe
+function applyResult(q, correct){
+  q.seen = (q.seen || 0) + 1;
+  q.last = today();
+  if(correct){
+    q.box = Math.min((q.box || 0) + 1, 5);
+    q.due = addDays(today(), INTERVALS[q.box]);
+    q.right = (q.right || 0) + 1;
+  }else{
+    q.box = 1;
+    q.due = addDays(today(), 1);
+    q.wrong = (q.wrong || 0) + 1;
+  }
+  save();
+}
+function rank(q){ if(q.seen && q.box === 1) return 0; if(q.seen) return 1; return 2; }
+function dueQuestions(subjectId){
+  const t = today();
+  return db.questions
+    .filter(q => (!subjectId || q.subjectId === subjectId) && q.due <= t)
+    .sort((a, b) => rank(a) - rank(b) || a.due.localeCompare(b.due));
+}
+function streak(){
+  const days = new Set(db.history.map(x => x.date));
+  let d = today(), n = 0;
+  if(!days.has(d)) d = addDays(d, -1);
+  while(days.has(d)){ n++; d = addDays(d, -1); }
+  return n;
+}
+
+/* ---------- Gemini ---------- */
+const API = "https://generativelanguage.googleapis.com/v1beta";
+function parseJSON(text){
+  let t = String(text).trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try{ return JSON.parse(t); }catch(e){}
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if(a >= 0 && b > a) return JSON.parse(t.slice(a, b+1));
+  throw new Error("Die Antwort war kein gültiges JSON.");
+}
+async function gemini(parts, schema, temperature){
+  const key = getKey();
+  if(!key) throw new Error("Kein API-Key hinterlegt. Trag ihn unter „Einstellungen“ ein.");
+  const model = getModel().replace(/^models\//, "");
+  let res;
+  try{
+    res = await fetch(`${API}/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "x-goog-api-key": key},
+      body: JSON.stringify({
+        contents: [{role: "user", parts}],
+        generationConfig: {responseMimeType: "application/json", responseSchema: schema, temperature}
+      })
+    });
+  }catch(e){ throw new Error("Keine Verbindung zu Gemini. Bist du online?"); }
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok){
+    const msg = (data.error && data.error.message) || res.statusText;
+    if(res.status === 429) throw new Error("Das Limit der kostenlosen Gemini-Stufe ist gerade erreicht. Warte eine Minute oder probier es später noch mal. (" + msg + ")");
+    if(res.status === 404) throw new Error(`Das Modell „${model}“ gibt es nicht oder es ist für deinen Key nicht freigeschaltet. Wähl unter „Einstellungen“ ein anderes.`);
+    if(/api key|API_KEY/i.test(msg)) throw new Error("Gemini akzeptiert den API-Key nicht. Prüf ihn unter „Einstellungen“.");
+    throw new Error(`Gemini-Fehler ${res.status}: ${msg}`);
+  }
+  const cand = data.candidates && data.candidates[0];
+  const text = ((cand && cand.content && cand.content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join("");
+  if(!text){
+    const why = (cand && cand.finishReason) || (data.promptFeedback && data.promptFeedback.blockReason) || "unbekannt";
+    throw new Error("Gemini hat keine Antwort geliefert (Grund: " + why + ").");
+  }
+  return parseJSON(text);
+}
+const QUIZ_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    fragen: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          typ: {type: "STRING", enum: ["single", "multi", "offen"]},
+          frage: {type: "STRING"},
+          optionen: {type: "ARRAY", items: {type: "STRING"}},
+          richtig: {type: "ARRAY", items: {type: "INTEGER"}},
+          musterantwort: {type: "STRING"},
+          erklaerung: {type: "STRING"}
+        },
+        required: ["typ", "frage", "erklaerung"]
+      }
+    }
+  },
+  required: ["fragen"]
+};
+const GRADE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    bewertung: {type: "STRING", enum: ["richtig", "teilweise", "falsch"]},
+    feedback: {type: "STRING"}
+  },
+  required: ["bewertung", "feedback"]
+};
+
+function buildPrompt(n, types, subject, existing, forChat){
+  const desc = {
+    single: "Single Choice: genau 4 Antwortoptionen, genau eine ist richtig",
+    multi: "Multiple Choice: 4 oder 5 Antwortoptionen, davon 2 oder 3 richtig",
+    offen: "offene Frage: lässt sich in 1 bis 3 Sätzen beantworten"
+  };
+  let p = `Du erstellst Lernkontrollfragen für das Hochschulfach „${subject}“. Grundlage ist ausschließlich das mitgelieferte Vorlesungsmaterial.
+
+Erstelle genau ${n} Fragen. Verteile sie möglichst gleichmäßig auf diese Fragetypen:
+${types.map(t => "- " + desc[t]).join("\n")}
+
+Regeln:
+- Frag nach dem, was in einer Klausur drankommen würde: zentrale Begriffe, Zusammenhänge, Ursache und Wirkung, Vor- und Nachteile, Berechnungen, Anwendung auf ein kurzes Praxisbeispiel.
+- Keine Fragen zu Organisatorischem (Termine, Prüfungsform, Dozent, Gliederung, Foliennummern, Literaturangaben).
+- Falsche Antwortoptionen müssen plausibel klingen und ungefähr so lang sein wie die richtigen. Keine Optionen wie „alle genannten“ oder „keine der genannten“.
+- „richtig“ enthält die nullbasierten Indizes der korrekten Optionen. Bei offenen Fragen bleiben „optionen“ und „richtig“ leer.
+- Bei offenen Fragen nennt „musterantwort“ die Kernpunkte, die eine vollständige Antwort enthalten muss.
+- „erklaerung“: ein bis zwei Sätze, warum die Lösung stimmt.
+- Alles auf Deutsch.`;
+  if(existing.length){
+    p += `\n\nDiese Fragen gibt es zu dem Fach bereits. Stelle keine inhaltsgleichen:\n` + existing.map(x => "- " + x).join("\n");
+  }
+  if(forChat){
+    p += `\n\nAntworte ausschließlich mit JSON in genau diesem Format, ohne Text davor oder danach:
+{"fragen":[{"typ":"single","frage":"...","optionen":["...","...","...","..."],"richtig":[0],"musterantwort":"","erklaerung":"..."}]}`;
+  }
+  return p;
+}
+
+function normalize(raw){
+  const arr = Array.isArray(raw) ? raw : (raw && (raw.fragen || raw.questions)) || [];
+  const out = [];
+  for(const q of arr){
+    if(!q || typeof q.frage !== "string" || !q.frage.trim()) continue;
+    const frage = q.frage.trim();
+    const erklaerung = String(q.erklaerung || "").trim();
+    let typ = String(q.typ || "").toLowerCase();
+    if(typ === "offen" || typ === "open"){
+      out.push({typ: "offen", frage, musterantwort: String(q.musterantwort || erklaerung).trim(), erklaerung});
+      continue;
+    }
+    const optionen = (Array.isArray(q.optionen) ? q.optionen : []).map(String).map(s => s.trim()).filter(Boolean);
+    const richtig = [...new Set((Array.isArray(q.richtig) ? q.richtig : []).map(Number))]
+      .filter(i => Number.isInteger(i) && i >= 0 && i < optionen.length);
+    if(optionen.length < 2 || !richtig.length) continue;
+    typ = (richtig.length > 1 || typ === "multi") ? "multi" : "single";
+    out.push({typ, frage, optionen, richtig, erklaerung});
+  }
+  return out;
+}
+function addQuestions(list, subjectId, source){
+  const t = today();
+  const added = list.map(q => Object.assign({id: uid(), subjectId, source, created: t, box: 0, due: t, seen: 0, right: 0, wrong: 0}, q));
+  db.questions.push(...added);
+  save();
+  return added;
+}
+
+async function readFiles(files){
+  const parts = [], names = [], texts = [];
+  let size = 0;
+  for(const f of files){
+    names.push(f.name);
+    size += f.size;
+    if(f.type === "application/pdf" || /\.pdf$/i.test(f.name)){
+      const b64 = await new Promise((ok, fail) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result).split(",")[1]);
+        r.onerror = () => fail(r.error);
+        r.readAsDataURL(f);
+      });
+      parts.push({inline_data: {mime_type: "application/pdf", data: b64}});
+    }else{
+      const t = await f.text();
+      texts.push(`Inhalt von ${f.name}:\n${t}`);
+    }
+  }
+  return {parts, names, texts, size};
+}
+
+/* ---------- Navigation ---------- */
+let view = "home";
+let session = null;
+function go(v){
+  if(session && v !== "quiz" && !confirm("Quiz abbrechen? Bereits beantwortete Fragen bleiben gespeichert.")) return;
+  if(v !== "quiz" && session){ finishSession(true); }
+  view = v;
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  const main = document.getElementById("main");
+  main.replaceChildren();
+  ({home: renderHome, new: renderNew, pool: renderPool, settings: renderSettings, quiz: renderQuiz})[v](main);
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("#nav button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
+
+/* ---------- Ansicht: Heute ---------- */
+function renderHome(main){
+  const due = dueQuestions();
+  const todayDone = db.history.filter(x => x.date === today()).reduce((s, x) => s + x.total, 0);
+  main.append(h("div", {class: "stats"},
+    h("div", {class: "stat"}, h("b", null, streak()), h("span", null, "Tage in Folge")),
+    h("div", {class: "stat"}, h("b", null, due.length), h("span", null, "heute fällig")),
+    h("div", {class: "stat"}, h("b", null, todayDone), h("span", null, "heute beantwortet"))
+  ));
+  if(!getKey()){
+    main.append(h("div", {class: "card feedback warn"},
+      h("p", null, "Noch kein Gemini-API-Key hinterlegt. Ohne Key kannst du Quizze nur über die Gemini-App erzeugen und offene Fragen selbst bewerten."),
+      h("button", {class: "link", onclick: () => go("settings")}, "Zu den Einstellungen")));
+  }
+  if(!db.subjects.length){
+    main.append(h("div", {class: "card"},
+      h("h2", null, "Los geht’s"),
+      h("p", null, "Leg unter „Neues Quiz“ dein erstes Fach an und lade die Folien der letzten Vorlesung hoch."),
+      h("button", {class: "btn", onclick: () => go("new")}, "Erstes Quiz erstellen")));
+    return;
+  }
+  const card = h("div", {class: "card"}, h("h2", null, "Tagesquiz"));
+  if(due.length){
+    card.append(h("p", {class: "muted"}, `Bis zu ${getDaily()} Fragen. Was du falsch hattest, kommt zuerst.`),
+      h("button", {class: "btn", onclick: () => startQuiz(due.slice(0, getDaily()), null)}, "Alle Fächer starten"));
+  }else{
+    card.append(h("p", {class: "muted"}, "Für heute ist nichts mehr fällig. Lad neues Material hoch oder schau morgen wieder rein."));
+  }
+  main.append(card);
+  const list = h("div", {class: "card"}, h("h3", null, "Nach Fach"));
+  for(const s of db.subjects){
+    const d = dueQuestions(s.id);
+    const total = db.questions.filter(q => q.subjectId === s.id).length;
+    list.append(h("div", {class: "subj"},
+      h("div", null, h("div", null, s.name), h("div", {class: "muted"}, `${total} Fragen · ${d.length} fällig`)),
+      h("button", {class: "btn secondary", disabled: !d.length, onclick: () => startQuiz(d.slice(0, getDaily()), s.id)}, "Üben")));
+  }
+  main.append(list);
+}
+
+/* ---------- Ansicht: Neues Quiz ---------- */
+function subjectPicker(selectedId){
+  const sel = h("select", {id: "subject"},
+    h("option", {value: ""}, "Fach wählen …"),
+    db.subjects.map(s => h("option", {value: s.id, selected: s.id === selectedId}, s.name)));
+  const inp = h("input", {type: "text", placeholder: "Neues Fach, z. B. Supply Chain Management"});
+  const add = h("button", {class: "btn secondary", onclick: () => {
+    const name = inp.value.trim();
+    if(!name) return;
+    let s = db.subjects.find(x => x.name.toLowerCase() === name.toLowerCase());
+    if(!s){ s = {id: uid(), name}; db.subjects.push(s); save(); sel.append(h("option", {value: s.id}, s.name)); }
+    sel.value = s.id; inp.value = "";
+  }}, "Anlegen");
+  return {sel, el: h("div", null, h("div", {class: "row"}, sel), h("div", {class: "row", style: "margin-top:8px"}, inp, add))};
+}
+function renderNew(main){
+  const picker = subjectPicker(LS.get("lq_lastSubject", ""));
+  const file = h("input", {type: "file", accept: ".pdf,.txt,.md,application/pdf,text/plain", multiple: true});
+  const notes = h("textarea", {placeholder: "Optional: eigene Notizen oder Text hier einfügen"});
+  const count = h("input", {type: "range", min: 5, max: 10, value: getDaily(), style: "width:100%"});
+  const countLbl = h("span", null, count.value);
+  count.addEventListener("input", () => countLbl.textContent = count.value);
+  const types = ["single", "multi", "offen"].map(t => h("input", {type: "checkbox", value: t, checked: true}));
+  const status = h("div", {class: "status"});
+  const btn = h("button", {class: "btn"}, "Quiz erstellen");
+
+  function collect(){
+    const subjectId = picker.sel.value;
+    if(!subjectId) throw new Error("Bitte wähl ein Fach aus oder leg eins an.");
+    const ty = types.filter(c => c.checked).map(c => c.value);
+    if(!ty.length) throw new Error("Wähl mindestens einen Fragetyp.");
+    if(!file.files.length && !notes.value.trim()) throw new Error("Lad eine Datei hoch oder füg Notizen ein.");
+    LS.set("lq_lastSubject", subjectId);
+    const existing = db.questions.filter(q => q.subjectId === subjectId).slice(-40).map(q => q.frage);
+    return {subjectId, ty, n: parseInt(count.value, 10), existing};
+  }
+
+  btn.addEventListener("click", async () => {
+    let c;
+    try{ c = collect(); }catch(e){ status.className = "status err"; status.textContent = e.message; return; }
+    btn.disabled = true;
+    status.className = "status";
+    status.replaceChildren(h("span", {class: "spinner"}), "Gemini liest das Material und baut dein Quiz. Das dauert meist 10 bis 40 Sekunden …");
+    try{
+      const f = await readFiles(file.files);
+      if(f.size > 15 * 1024 * 1024) throw new Error("Die Dateien sind zusammen größer als 15 MB. Teil das Skript auf oder lad nur die Folien der aktuellen Vorlesung hoch.");
+      const parts = [...f.parts];
+      const txt = [...f.texts, notes.value.trim() ? "Eigene Notizen:\n" + notes.value.trim() : ""].filter(Boolean).join("\n\n");
+      if(txt) parts.push({text: txt});
+      parts.push({text: buildPrompt(c.n, c.ty, subjName(c.subjectId), c.existing, false)});
+      const raw = await gemini(parts, QUIZ_SCHEMA, 0.7);
+      const qs = normalize(raw);
+      if(!qs.length) throw new Error("Gemini hat keine brauchbaren Fragen geliefert. Versuch es noch einmal.");
+      const source = f.names.length ? f.names.join(", ") : "Notizen";
+      const added = addQuestions(qs, c.subjectId, source);
+      startQuiz(added, c.subjectId);
+    }catch(e){
+      status.className = "status err";
+      status.textContent = e.message;
+    }finally{ btn.disabled = false; }
+  });
+
+  const pasteArea = h("textarea", {placeholder: "Hier die JSON-Antwort aus der Gemini-App einfügen"});
+  const pasteStatus = h("div", {class: "status"});
+  const copyBtn = h("button", {class: "btn secondary", onclick: async () => {
+    let c;
+    try{ c = collect(); }catch(e){ pasteStatus.className = "status err"; pasteStatus.textContent = e.message; return; }
+    const f = await readFiles([...file.files].filter(x => !/\.pdf$/i.test(x.name)));
+    const hasPdf = [...file.files].some(x => /\.pdf$/i.test(x.name));
+    let p = buildPrompt(c.n, c.ty, subjName(c.subjectId), c.existing, true);
+    const txt = [...f.texts, notes.value.trim() ? "Eigene Notizen:\n" + notes.value.trim() : ""].filter(Boolean).join("\n\n");
+    if(txt) p += "\n\nVorlesungsmaterial:\n" + txt;
+    if(hasPdf) p += "\n\nDas Vorlesungsmaterial steht außerdem in der angehängten PDF-Datei.";
+    try{
+      await navigator.clipboard.writeText(p);
+      pasteStatus.className = "status";
+      pasteStatus.textContent = hasPdf
+        ? "Prompt kopiert. Öffne die Gemini-App, häng die PDF an, füg den Prompt ein und kopier die Antwort hierher."
+        : "Prompt kopiert. Füg ihn in der Gemini-App ein und kopier die Antwort hierher.";
+    }catch(e){
+      pasteArea.value = p;
+      pasteStatus.className = "status";
+      pasteStatus.textContent = "Kopieren ging nicht automatisch. Der Prompt steht jetzt im Feld unten, kopier ihn von dort.";
+    }
+  }}, "Prompt kopieren");
+  const importBtn = h("button", {class: "btn", onclick: () => {
+    try{
+      const subjectId = picker.sel.value;
+      if(!subjectId) throw new Error("Bitte wähl zuerst ein Fach aus.");
+      const qs = normalize(parseJSON(pasteArea.value));
+      if(!qs.length) throw new Error("Im eingefügten Text habe ich keine gültigen Fragen gefunden.");
+      const added = addQuestions(qs, subjectId, "Gemini-App");
+      startQuiz(added, subjectId);
+    }catch(e){ pasteStatus.className = "status err"; pasteStatus.textContent = e.message; }
+  }}, "Fragen übernehmen");
+
+  main.append(h("div", {class: "card"},
+    h("h2", null, "Neues Quiz aus Vorlesungsinhalten"),
+    h("label", {class: "field"}, "Fach"), picker.el,
+    h("label", {class: "field"}, "Folien (PDF) oder Textdateien"), file,
+    h("label", {class: "field"}, "Notizen"), notes,
+    h("label", {class: "field"}, "Anzahl Fragen: ", countLbl), count,
+    h("label", {class: "field"}, "Fragetypen"),
+    h("div", {class: "chips"}, types.map(c => h("label", {class: "chip"}, c, TYPE_LABEL[c.value]))),
+    h("div", {class: "actions"}, btn), status
+  ));
+  main.append(h("div", {class: "card"},
+    h("details", null,
+      h("summary", null, "Ohne API über die Gemini-App"),
+      h("p", {class: "muted", style: "margin-top:10px"}, "Falls das API-Limit erreicht ist: Fach, Dateien und Fragetypen oben auswählen, Prompt kopieren, in der Gemini-App ausführen und die Antwort hier einfügen."),
+      h("div", {class: "actions"}, copyBtn),
+      h("label", {class: "field"}, "Antwort aus Gemini"), pasteArea,
+      h("div", {class: "actions"}, importBtn), pasteStatus)
+  ));
+}
+
+/* ---------- Quiz ---------- */
+function startQuiz(questions, subjectId){
+  if(!questions.length){ alert("Keine Fragen fällig."); return; }
+  session = {
+    subjectId,
+    items: questions.map(q => ({q, order: q.typ === "offen" ? null : shuffle(q.optionen.map((_, i) => i)), done: false, correct: null, grade: null})),
+    i: 0
+  };
+  view = "quiz";
+  document.querySelectorAll("#nav button").forEach(b => b.classList.remove("active"));
+  const main = document.getElementById("main");
+  main.replaceChildren();
+  renderQuiz(main);
+  window.scrollTo(0, 0);
+}
+function record(item, correct, grade){
+  item.done = true; item.correct = correct; item.grade = grade || null;
+  applyResult(item.q, correct);
+}
+function renderQuiz(main){
+  main.replaceChildren();
+  const s = session;
+  if(!s) return go("home");
+  if(s.i >= s.items.length) return renderSummary(main);
+  const item = s.items[s.i], q = item.q;
+  const card = h("div", {class: "card"});
+  main.append(
+    h("div", {class: "row", style: "justify-content:space-between;margin-bottom:8px"},
+      h("span", {class: "muted"}, `Frage ${s.i + 1} von ${s.items.length}`),
+      h("button", {class: "link", onclick: () => go("home")}, "Beenden")),
+    h("div", {class: "progress"}, h("div", {style: `width:${(s.i / s.items.length) * 100}%`})),
+    card);
+  card.append(
+    h("div", null, h("span", {class: "tag"}, subjName(q.subjectId)), h("span", {class: "tag"}, TYPE_LABEL[q.typ]),
+      q.seen && q.box === 1 ? h("span", {class: "tag"}, "Wiederholung") : null),
+    h("div", {class: "question"}, q.frage));
+  const next = h("button", {class: "btn", onclick: () => { s.i++; renderQuiz(main); window.scrollTo(0, 0); }},
+    s.i + 1 < s.items.length ? "Weiter" : "Auswertung");
+
+  if(q.typ === "offen"){
+    const ta = h("textarea", {placeholder: "Deine Antwort in eigenen Worten"});
+    const out = h("div");
+    const submit = h("button", {class: "btn"}, "Antwort abgeben");
+    const showSolution = () => put(out, 
+      h("div", {class: "feedback warn"}, h("b", null, "Musterantwort: "), q.musterantwort || "–"),
+      q.erklaerung && q.erklaerung !== q.musterantwort ? h("p", {class: "muted"}, q.erklaerung) : null);
+    const selfGrade = () => {
+      showSolution();
+      out.append(h("p", null, "Wie war deine Antwort?"), h("div", {class: "actions"},
+        h("button", {class: "btn", onclick: () => { record(item, true, "richtig"); s.i++; renderQuiz(main); }}, "Hatte ich richtig"),
+        h("button", {class: "btn secondary", onclick: () => { record(item, false, "falsch"); s.i++; renderQuiz(main); }}, "Teilweise oder falsch")));
+    };
+    submit.addEventListener("click", async () => {
+      submit.disabled = true; ta.disabled = true;
+      if(!getKey() || !ta.value.trim()){ submit.remove(); return selfGrade(); }
+      out.replaceChildren(h("div", {class: "status"}, h("span", {class: "spinner"}), "Gemini bewertet deine Antwort …"));
+      try{
+        const prompt = `Bewerte die Antwort eines Studierenden auf eine Lernkontrollfrage.
+
+Frage: ${q.frage}
+Musterantwort und Kernpunkte: ${q.musterantwort}
+Antwort des Studierenden: ${ta.value.trim()}
+
+Bewerte den Inhalt, nicht Formulierung oder Rechtschreibung. „richtig“: alle wesentlichen Kernpunkte sind sinngemäß enthalten. „teilweise“: ein Teil fehlt oder ist ungenau. „falsch“: der Kern ist verfehlt.
+„feedback“: ein bis drei Sätze auf Deutsch, direkt an den Studierenden in der Du-Form. Sag konkret, was gut war und was fehlt.`;
+        const g = await gemini([{text: prompt}], GRADE_SCHEMA, 0.2);
+        const b = ["richtig", "teilweise", "falsch"].includes(g.bewertung) ? g.bewertung : "falsch";
+        record(item, b === "richtig", b);
+        fill(out, 
+          h("div", {class: "feedback " + (b === "richtig" ? "ok" : b === "teilweise" ? "warn" : "bad")},
+            h("b", null, b === "richtig" ? "Richtig. " : b === "teilweise" ? "Teilweise richtig. " : "Leider nicht richtig. "), g.feedback || ""),
+          h("p", {class: "muted"}, h("b", null, "Musterantwort: "), q.musterantwort),
+          b !== "richtig" ? h("p", {class: "muted"}, "Die Frage kommt morgen wieder.") : null,
+          h("div", {class: "actions"}, next));
+        submit.remove();
+      }catch(e){
+        out.replaceChildren(h("div", {class: "status err"}, e.message + " Bewerte dich diesmal selbst:"));
+        submit.remove();
+        selfGrade();
+      }
+    });
+    card.append(ta, h("div", {class: "actions"}, submit), out);
+    return;
+  }
+
+  const multi = q.typ === "multi";
+  const inputs = [];
+  const opts = item.order.map(idx => {
+    const inp = h("input", {type: multi ? "checkbox" : "radio", name: "opt", value: idx});
+    inputs.push(inp);
+    return h("label", {class: "opt"}, inp, h("span", null, q.optionen[idx]));
+  });
+  const out = h("div");
+  const check = h("button", {class: "btn"}, "Prüfen");
+  check.addEventListener("click", () => {
+    const chosen = inputs.filter(i => i.checked).map(i => Number(i.value));
+    if(!chosen.length){ out.replaceChildren(h("div", {class: "status err"}, "Wähl zuerst eine Antwort.")); return; }
+    const right = new Set(q.richtig);
+    const correct = chosen.length === right.size && chosen.every(x => right.has(x));
+    inputs.forEach((inp, j) => {
+      inp.disabled = true;
+      const idx = item.order[j];
+      if(right.has(idx)) opts[j].classList.add("ok");
+      else if(inp.checked) opts[j].classList.add("bad");
+    });
+    record(item, correct);
+    check.remove();
+    fill(out, 
+      h("div", {class: "feedback " + (correct ? "ok" : "bad")},
+        h("b", null, correct ? "Richtig. " : "Leider falsch. "), q.erklaerung || ""),
+      !correct ? h("p", {class: "muted"}, "Die Frage kommt morgen wieder.") : null,
+      h("div", {class: "actions"}, next));
+  });
+  put(card, 
+    multi ? h("p", {class: "muted"}, "Eine oder mehrere Antworten sind richtig.") : null,
+    opts, h("div", {class: "actions"}, check), out);
+}
+function finishSession(aborted){
+  const s = session;
+  session = null;
+  if(!s) return;
+  const done = s.items.filter(x => x.done);
+  if(done.length){
+    db.history.push({date: today(), subjectId: s.subjectId, total: done.length, correct: done.filter(x => x.correct).length});
+    save();
+  }
+}
+function renderSummary(main){
+  const s = session;
+  const done = s.items.filter(x => x.done);
+  const right = done.filter(x => x.correct).length;
+  finishSession(false);
+  const wrong = done.filter(x => !x.correct);
+  main.append(h("div", {class: "card"},
+    h("h2", null, `${right} von ${done.length} richtig`),
+    h("p", null, right === done.length ? "Stark. Alles saß." : "Die falschen Fragen kommen morgen wieder, bis sie sitzen."),
+    wrong.length ? h("div", null, h("h3", null, "Nochmal anschauen"),
+      wrong.map(x => h("div", {class: "qitem"}, h("div", null,
+        h("div", null, x.q.frage),
+        h("div", {class: "muted"}, x.q.typ === "offen" ? x.q.musterantwort : x.q.richtig.map(i => x.q.optionen[i]).join(" · ")))))) : null,
+    h("div", {class: "actions"}, h("button", {class: "btn", onclick: () => go("home")}, "Zur Übersicht"))));
+}
+
+/* ---------- Ansicht: Fragen ---------- */
+function renderPool(main){
+  const sel = h("select", null, h("option", {value: ""}, "Alle Fächer"),
+    db.subjects.map(s => h("option", {value: s.id}, s.name)));
+  sel.value = LS.get("lq_poolFilter", "");
+  const list = h("div");
+  const delSubj = h("button", {class: "btn danger"}, "Fach löschen");
+  function draw(){
+    LS.set("lq_poolFilter", sel.value);
+    delSubj.style.display = sel.value ? "" : "none";
+    const qs = db.questions.filter(q => !sel.value || q.subjectId === sel.value).slice().reverse();
+    list.replaceChildren(qs.length ? "" : h("p", {class: "muted"}, "Noch keine Fragen."));
+    for(const q of qs){
+      list.append(h("div", {class: "qitem"},
+        h("div", null,
+          h("div", null, q.frage),
+          h("div", {class: "muted"}, `${TYPE_LABEL[q.typ]} · ${subjName(q.subjectId)} · Stufe ${q.box || 0} · nächste Abfrage ${fmtDate(q.due)}`
+            + (q.seen ? ` · ${q.right || 0}× richtig, ${q.wrong || 0}× falsch` : " · neu"))),
+        h("button", {class: "link", onclick: () => {
+          if(!confirm("Diese Frage löschen?")) return;
+          db.questions = db.questions.filter(x => x.id !== q.id); save(); draw();
+        }}, "Löschen")));
+    }
+  }
+  delSubj.addEventListener("click", () => {
+    const id = sel.value, n = db.questions.filter(q => q.subjectId === id).length;
+    if(!confirm(`Fach „${subjName(id)}“ mit ${n} Fragen löschen?`)) return;
+    db.subjects = db.subjects.filter(s => s.id !== id);
+    db.questions = db.questions.filter(q => q.subjectId !== id);
+    save(); sel.querySelector(`option[value="${id}"]`).remove(); sel.value = ""; draw();
+  });
+  sel.addEventListener("change", draw);
+  main.append(h("div", {class: "card"},
+    h("h2", null, "Fragensammlung"),
+    h("div", {class: "row"}, sel, delSubj),
+    h("div", {style: "margin-top:12px"}, list)));
+  draw();
+}
+
+/* ---------- Ansicht: Einstellungen ---------- */
+function renderSettings(main){
+  const key = h("input", {type: "password", value: getKey(), placeholder: "AQ.… oder AIza…", autocomplete: "off"});
+  const show = h("button", {class: "link", onclick: () => { key.type = key.type === "password" ? "text" : "password"; }}, "anzeigen");
+  const model = h("input", {type: "text", value: getModel(), list: "models"});
+  const dl = h("datalist", {id: "models"});
+  const daily = h("input", {type: "range", min: 5, max: 10, value: getDaily(), style: "width:100%"});
+  const dailyLbl = h("span", null, daily.value);
+  daily.addEventListener("input", () => dailyLbl.textContent = daily.value);
+  const status = h("div", {class: "status"});
+
+  const saveBtn = h("button", {class: "btn", onclick: () => {
+    LS.set("lq_key", key.value.trim());
+    LS.set("lq_model", model.value.trim().replace(/^models\//, ""));
+    LS.set("lq_daily", daily.value);
+    status.className = "status"; status.textContent = "Gespeichert.";
+  }}, "Speichern");
+  const testBtn = h("button", {class: "btn secondary", onclick: async () => {
+    LS.set("lq_key", key.value.trim());
+    LS.set("lq_model", model.value.trim().replace(/^models\//, ""));
+    status.className = "status";
+    status.replaceChildren(h("span", {class: "spinner"}), "Teste Verbindung …");
+    try{
+      const r = await fetch(`${API}/models?pageSize=200`, {headers: {"x-goog-api-key": key.value.trim()}});
+      const d = await r.json().catch(() => ({}));
+      if(!r.ok) throw new Error((d.error && d.error.message) || r.statusText);
+      const names = (d.models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /gemini/i.test(m.name))
+        .map(m => m.name.replace(/^models\//, ""));
+      dl.replaceChildren(...names.map(n => h("option", {value: n})));
+      const ok = names.includes(model.value.trim());
+      status.className = "status" + (ok ? "" : " err");
+      status.textContent = ok
+        ? `Verbindung klappt. Modell „${model.value.trim()}“ ist verfügbar.`
+        : `Key funktioniert, aber das Modell „${model.value.trim()}“ fehlt in der Liste. Klick ins Modellfeld, um ein verfügbares auszuwählen.`;
+    }catch(e){ status.className = "status err"; status.textContent = "Fehler: " + e.message; }
+  }}, "Verbindung testen");
+
+  const exportBtn = h("button", {class: "btn secondary", onclick: () => {
+    const blob = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"});
+    const a = h("a", {href: URL.createObjectURL(blob), download: `lernquiz-backup-${today()}.json`});
+    document.body.append(a); a.click(); a.remove();
+    LS.set("lq_lastBackup", today());
+  }}, "Backup herunterladen");
+  const importFile = h("input", {type: "file", accept: ".json,application/json", style: "display:none", onchange: async () => {
+    try{
+      const d = JSON.parse(await importFile.files[0].text());
+      if(!Array.isArray(d.subjects) || !Array.isArray(d.questions)) throw new Error("Das ist keine Lernquiz-Sicherung.");
+      if(!confirm(`Backup mit ${d.subjects.length} Fächern und ${d.questions.length} Fragen laden? Der aktuelle Stand wird ersetzt.`)) return;
+      db = Object.assign({history: []}, d); save(); go("home");
+    }catch(e){ alert("Import fehlgeschlagen: " + e.message); }
+  }});
+  const lastBackup = LS.get("lq_lastBackup", "");
+
+  main.append(
+    h("div", {class: "card"},
+      h("h2", null, "Gemini"),
+      h("p", {class: "muted"}, "Den kostenlosen Key bekommst du in Google AI Studio. Er wird nur hier in diesem Browser gespeichert, nicht auf GitHub."),
+      h("label", {class: "field"}, "API-Key ", show), key,
+      h("label", {class: "field"}, "Modell"), model, dl,
+      h("p", {class: "muted", style: "margin-top:6px"}, "Wenn das Modell nicht klappt: „Verbindung testen“ drücken und im Modellfeld ein anderes Flash-Modell wählen."),
+      h("label", {class: "field"}, "Fragen im Tagesquiz: ", dailyLbl), daily,
+      h("div", {class: "actions"}, saveBtn, testBtn), status),
+    h("div", {class: "card"},
+      h("h2", null, "Daten sichern"),
+      h("p", {class: "muted"}, "Deine Fragen und dein Lernstand liegen nur in diesem Browser. Lad ab und zu ein Backup herunter, z. B. in deine Cloud."
+        + (lastBackup ? ` Letztes Backup: ${fmtDate(lastBackup)}.` : " Bisher kein Backup.")),
+      h("div", {class: "actions"}, exportBtn,
+        h("button", {class: "btn secondary", onclick: () => importFile.click()}, "Backup laden"), importFile)),
+    h("div", {class: "card"},
+      h("h3", null, "Alles zurücksetzen"),
+      h("button", {class: "btn danger", onclick: () => {
+        if(!confirm("Wirklich alle Fächer, Fragen und den Lernstand löschen?")) return;
+        db = {subjects: [], questions: [], history: []}; save(); go("home");
+      }}, "Alle Daten löschen"))
+  );
+}
+
+go("home");
+</script>
+</body>
+</html>
